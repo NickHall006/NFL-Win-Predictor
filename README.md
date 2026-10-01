@@ -44,6 +44,7 @@ per-season play-by-play, trimmed to the columns we need and cached locally.
 | Turnovers | Takeaways minus giveaways per game |
 | Recent form | Net EPA/play over the last 3 games |
 | Team strength | Elo rating, recent-weighted point differential |
+| Matchup | Home's passing offense vs. away's passing defense, and the rush equivalent |
 | Rest | Home rest days minus away rest days |
 | Home field | Modeled as the baseline (see below) |
 
@@ -82,6 +83,20 @@ when it says 70-80%, the favorite wins about 71%.
 
 What the model learned (`backtest` prints this): QB quality and overall team strength dominate; **turnover margin
 carries almost no signal**, consistent with turnovers being largely luck.
+
+## Things I tried
+
+- **Explicit offense-vs-defense matchup features.** The base features compare each team's
+  offense to the *other team's offense*, and each team's defense to the *other team's defense*
+  (e.g. "home passing offense minus away passing offense") — but never offense directly against
+  the opponent's defense. I added `matchup_pass` and `matchup_rush` (home's passing/rushing offense
+  minus the away team's passing/rushing defense) to encode that interaction explicitly. It shows up
+  as a top driver in the per-game explanation for lopsided matchups, but backtest log loss and Brier
+  were unchanged within noise (±0.001) for the ensemble. Likely explanation: the random forest and
+  gradient boosting models can already approximate this kind of interaction from the separate offense
+  and defense features, so making it explicit mostly helps interpretability, not accuracy. Logistic
+  regression, which can't learn interactions on its own, is the model most likely to actually benefit —
+  worth checking its score in isolation.
 
 ## Ideas to extend it
 

@@ -28,7 +28,7 @@ STATE_COLS = [
 # Home-field advantage is deliberately NOT a feature: models are trained on true home
 # games only, so home advantage is the model's baseline (see model.explain), and
 # neutral-site games are handled by symmetrizing the prediction.
-FEATURES = [f"d_{c}" for c in STATE_COLS] + ["rest_diff"]
+FEATURES = [f"d_{c}" for c in STATE_COLS] + ["rest_diff" , "matchup_pass", "matchup_rush"]
 
 # Used for the "what drove this prediction" breakdown
 GROUPS = {
@@ -39,6 +39,7 @@ GROUPS = {
     "Turnovers": ["d_turnover_margin"],
     "Recent form": ["d_form_net_epa"],
     "Rest": ["rest_diff"],
+    "Matchup": ["matchup_pass", "matchup_rush"],
 }
 
 EWMA_COLS = ["off_epa_pass", "off_epa_rush", "def_epa_pass", "def_epa_rush",
@@ -204,6 +205,8 @@ def build_features(games: pd.DataFrame, pbp: pd.DataFrame) -> FeatureSet:
 
     for c in STATE_COLS:
         gf[f"d_{c}"] = gf[f"h_{c}"] - gf[f"a_{c}"]
+    gf["matchup_pass"] = gf["h_off_epa_pass"] - gf["a_def_epa_pass"]
+    gf["matchup_rush"] = gf["h_off_epa_rush"] - gf["a_def_epa_rush"]
     gf["rest_diff"] = (gf["home_rest"].fillna(7) - gf["away_rest"].fillna(7)).clip(-7, 7)
     gf["home_win"] = np.where(gf["result"].isna() | (gf["result"] == 0), np.nan, (gf["result"] > 0).astype(float))
 
@@ -235,6 +238,8 @@ def matchup_row(fs: FeatureSet, home: str, away: str,
     row = {f"h_{c}": h[c] for c in STATE_COLS + ["qb_name"]}
     row.update({f"a_{c}": a[c] for c in STATE_COLS + ["qb_name"]})
     row.update({f"d_{c}": float(h[c]) - float(a[c]) for c in STATE_COLS})
+    row["matchup_pass"] = float(h["off_epa_pass"]) - float(a["def_epa_pass"])
+    row["matchup_rush"] = float(h["off_epa_rush"]) - float(a["def_epa_rush"])
     row["rest_diff"] = rest_diff
     return pd.DataFrame([row])
 
